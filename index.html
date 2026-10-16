@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ETS2 Route Advisor Pro - Telemetría Real</title>
+    <title>TruckSim GPS - ETS2 / ATS</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body {
-            background-color: #030303;
+            background-color: transparent; /* Transparente ideal para OBS Studio o fondos oscuros */
             color: #ffffff;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             display: flex;
@@ -17,169 +17,182 @@
             overflow: hidden;
         }
 
-        .gps-device {
+        /* Contenedor principal estilo TruckSim GPS */
+        .trucksim-container {
             position: relative;
-            width: 860px;
-            height: 720px;
-            background: linear-gradient(145deg, #1f1f1f, #0d0d0d);
-            border-radius: 24px;
-            padding: 14px;
-            box-shadow: 0 30px 70px rgba(0,0,0,0.95), inset 0 1px 3px rgba(255,255,255,0.15);
-            border: 3px solid #2a2a2a;
+            width: 780px;
+            height: 650px;
+            background: #111111;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #222222;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
         }
 
-        .screen-container {
+        /* Cabecera superior tipo TruckSim GPS */
+        .top-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 44px;
+            background: rgba(18, 18, 18, 0.9);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 10;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .next-turn-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffcc00;
+        }
+
+        .game-clock {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        /* Área central del mapa Canvas */
+        .map-viewport {
             position: relative;
             width: 100%;
-            height: 100%;
-            background-color: #0f0f0f;
-            border-radius: 14px;
+            flex: 1;
+            background-color: #161616;
             overflow: hidden;
-            border: 2px solid #000;
         }
 
         canvas { display: block; width: 100%; height: 100%; }
 
-        .top-time-bar {
+        /* Widgets flotantes superiores izquierdos (Velocidad y Límite) */
+        .speedometer-widget {
             position: absolute;
-            top: 14px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            font-size: 20px;
-            font-weight: 700;
-            color: #ffffff;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
-            letter-spacing: 0.8px;
-        }
-
-        .speed-cluster {
-            position: absolute;
-            top: 16px;
+            top: 56px;
             left: 16px;
             z-index: 10;
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 10px;
-            align-items: flex-start;
         }
 
-        .speedometer-box {
-            background: rgba(20, 20, 20, 0.92);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+        .speed-box {
+            background: rgba(25, 25, 25, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 8px;
-            padding: 6px 14px;
+            padding: 4px 12px;
             text-align: center;
-            min-width: 80px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+            min-width: 75px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        .speed-number { font-size: 26px; font-weight: 800; line-height: 1; color: #ffffff; }
-        .speed-unit-label { font-size: 11px; color: #aaaaaa; margin-top: 2px; font-weight: 600; text-transform: uppercase; }
+        .speed-val { font-size: 24px; font-weight: 800; line-height: 1; color: #ffffff; }
+        .speed-unit { font-size: 10px; color: #aaaaaa; font-weight: 600; text-transform: uppercase; }
 
-        .speed-limit-sign {
-            width: 50px;
-            height: 50px;
+        .speed-limit-badge {
+            width: 44px;
+            height: 44px;
             background-color: #ffffff;
-            border: 5px solid #d92b2b;
+            border: 4px solid #e53935;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
             color: #000000;
-            font-size: 19px;
+            font-size: 17px;
             font-weight: 900;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        /* Panel Route Advisor extendido inferior (Carga, Ruta y Tiempo real) */
-        .route-advisor-bar {
+        /* Panel inferior Route Advisor estilo TruckSim GPS */
+        .bottom-advisor {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
-            background: rgba(12, 12, 12, 0.96);
+            background: rgba(15, 15, 15, 0.95);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 10;
             display: flex;
             flex-direction: column;
-            padding: 10px 20px;
-            font-size: 14px;
+            padding: 8px 16px;
+            font-size: 13px;
             font-weight: 600;
-            color: #e5e5e5;
-            gap: 6px;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+            color: #dddddd;
+            gap: 4px;
         }
 
-        .advisor-row {
+        .advisor-line {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .advisor-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .cargo-text { color: #81c784; }
+        .time-remaining { color: #ffb74d; }
 
-        .advisor-icon { width: 16px; height: 16px; fill: #4CAF50; flex-shrink: 0; }
-
-        .telemetry-status {
+        /* Aviso de estado de conexión */
+        .connection-alert {
             position: absolute;
-            top: 75px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 56px;
+            right: 16px;
             background: rgba(220, 53, 69, 0.9);
             color: white;
-            padding: 4px 14px;
-            border-radius: 20px;
-            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 10px;
             font-weight: 600;
             z-index: 12;
             display: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
         }
     </style>
 </head>
 <body>
 
-    <div class="gps-device">
-        <div class="screen-container">
-            <div class="top-time-bar" id="game-time">Dom 9:32</div>
-
-            <div class="speed-cluster">
-                <div class="speedometer-box">
-                    <div class="speed-number" id="speed-val">0</div>
-                    <div class="speed-unit-label">km/h</div>
-                </div>
-                <div class="speed-limit-sign" id="speed-limit">90</div>
+    <div class="trucksim-container">
+        <!-- Cabecera Superior: Indicador de Giro y Hora -->
+        <div class="top-header">
+            <div class="next-turn-container">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffcc00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                <span id="next-turn-text">Continuar en Autovía</span>
             </div>
+            <div class="game-clock" id="game-time">Dom 12:40</div>
+        </div>
 
-            <div class="telemetry-status" id="telemetry-status">Desconectado de localhost:31377</div>
+        <div class="connection-alert" id="conn-alert">Desconectado de ETS2</div>
 
+        <!-- Velocímetro y límite flotantes -->
+        <div class="speedometer-widget">
+            <div class="speed-box">
+                <div class="speed-val" id="speed-val">0</div>
+                <div class="speed-unit">km/h</div>
+            </div>
+            <div class="speed-limit-badge" id="speed-limit">90</div>
+        </div>
+
+        <!-- Lienzo del Mapa GPS 3D -->
+        <div class="map-viewport">
             <canvas id="gps-canvas"></canvas>
+        </div>
 
-            <!-- Barra Route Advisor Profesional con Carga y Tiempos -->
-            <div class="route-advisor-bar">
-                <div class="advisor-row">
-                    <div class="advisor-item">
-                        <svg class="advisor-icon" viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm12 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM17 12V9.5h2.5l1.96 2.5H17z"/></svg>
-                        <span id="cargo-info">Carga: Sin Remolque</span>
-                    </div>
-                    <div class="advisor-item" style="color: #ffb74d;">
-                        <span>Restante: <span id="eta-time">-- h -- min</span></span>
-                    </div>
-                </div>
-                <div class="advisor-row" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 5px; font-size: 13px; color: #b0b0b0;">
-                    <div class="advisor-item">
-                        <svg class="advisor-icon" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"/></svg>
-                        <span id="destination-info">Destino: --</span>
-                    </div>
-                    <div>
-                        <span>Distancia: <span id="eta-dist">0 km</span></span>
-                    </div>
-                </div>
+        <!-- Barra inferior de información de carga y ruta -->
+        <div class="bottom-advisor">
+            <div class="advisor-line">
+                <span class="cargo-text" id="cargo-info">Carga: Sin Remolque</span>
+                <span class="time-remaining">Restante: <span id="eta-time">-- h -- min</span></span>
+            </div>
+            <div class="advisor-line" style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 4px; font-size: 12px; color: #aaaaaa;">
+                <span id="destination-info">Destino: --</span>
+                <span>Distancia: <span id="eta-dist">0 km</span></span>
             </div>
         </div>
     </div>
@@ -195,7 +208,7 @@
         const elEtaTime = document.getElementById('eta-time');
         const elDestination = document.getElementById('destination-info');
         const elEtaDist = document.getElementById('eta-dist');
-        const elStatus = document.getElementById('telemetry-status');
+        const elAlert = document.getElementById('conn-alert');
 
         function resizeCanvas() {
             canvas.width = canvas.clientWidth;
@@ -204,30 +217,29 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        let telemetry = {
+        let currentPos = { x: 0, z: 0, heading: 0, speed: 0 };
+        let targetPos = { x: 0, z: 0, heading: 0, speed: 0 };
+        let telemetryData = {
             speed: 0,
             speedLimit: 90,
-            time: "Dom 9:32",
+            time: "Dom 12:40",
             cargo: "Sin Remolque",
             destination: "Ninguno",
             distanceKm: 0,
-            etaFormatted: "-- h -- min",
-            connected: false
+            etaFormatted: "-- h -- min"
         };
 
-        let currentPos = { x: 0, z: 0, heading: 0, speed: 0 };
-        let targetPos = { x: 0, z: 0, heading: 0, speed: 0 };
+        // Red de carreteras de simulación / mapa
+        const roadSegments = generateRoads();
 
-        const roadNetwork = generateRoadNetwork();
-
-        function generateRoadNetwork() {
+        function generateRoads() {
             const segments = [];
             const mainRoad = [];
-            for (let i = -12000; i <= 12000; i += 30) {
-                const x = Math.sin(i * 0.001) * 250 + Math.cos(i * 0.0003) * 90;
+            for (let i = -15000; i <= 15000; i += 30) {
+                const x = Math.sin(i * 0.0009) * 280 + Math.cos(i * 0.0003) * 100;
                 mainRoad.push({ x: x, z: i });
             }
-            segments.push({ type: 'highway', points: mainRoad, width: 42, color: '#e24300', shoulder: '#f3a000' });
+            segments.push({ points: mainRoad, width: 44, color: '#e24300', shoulder: '#f3a000' });
             return segments;
         }
 
@@ -237,16 +249,14 @@
                 if (!res.ok) throw new Error("HTTP Error");
                 
                 const data = await res.json();
-                elStatus.style.display = 'none';
-                telemetry.connected = true;
+                elAlert.style.display = 'none';
 
-                // Velocidad real del camión
                 if (data.truck) {
                     let rawSpeed = data.truck.speed !== undefined ? data.truck.speed : 0;
                     if (data.truck.speedKmh !== undefined) rawSpeed = data.truck.speedKmh / 3.6;
                     
                     targetPos.speed = Math.abs(Math.round(rawSpeed * 3.6));
-                    telemetry.speedLimit = Math.round(data.truck.speedLimit ? data.truck.speedLimit * 3.6 : 90);
+                    telemetryData.speedLimit = Math.round(data.truck.speedLimit ? data.truck.speedLimit * 3.6 : 90);
 
                     let pX = 0, pZ = 0, head = 0;
                     if (data.truck.placement) {
@@ -262,61 +272,50 @@
                     targetPos.heading = head;
                 }
 
-                // Carga actual del remolque
                 if (data.job) {
-                    if (data.job.cargoLoaded && data.job.cargo) {
-                        telemetry.cargo = data.job.cargo;
-                    } else {
-                        telemetry.cargo = "Viaje libre / Sin carga";
-                    }
-                    if (data.job.destinationCity) {
-                        telemetry.destination = data.job.destinationCity;
-                    }
+                    telemetryData.cargo = (data.job.cargoLoaded && data.job.cargo) ? data.job.cargo : "Viaje libre / Sin carga";
+                    telemetryData.destination = data.job.destinationCity || "En ruta";
                 }
 
-                // Hora del juego
                 if (data.game && data.game.time) {
                     const d = new Date(data.game.time);
                     if (!isNaN(d.getTime())) {
                         const dias = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-                        telemetry.time = `${dias[d.getUTCDay()]} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+                        telemetryData.time = `${dias[d.getUTCDay()]} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
                     }
                 }
 
-                // Navegación y tiempos restantes de ruta
                 if (data.navigation) {
                     const distMeters = data.navigation.estimatedDistance || 0;
-                    telemetry.distanceKm = Math.round(distMeters / 1000);
-
+                    telemetryData.distanceKm = Math.round(distMeters / 1000);
                     const timeSecs = data.navigation.estimatedTime || 0;
                     const totalMins = Math.round(timeSecs / 60);
-                    const hrs = Math.floor(totalMins / 60);
-                    const mins = totalMins % 60;
-                    telemetry.etaFormatted = `${hrs} h ${mins} min`;
+                    telemetryData.etaFormatted = `${Math.floor(totalMins / 60)} h ${totalMins % 60} min`;
                 }
 
             } catch (err) {
-                elStatus.style.display = 'block';
+                elAlert.style.display = 'block';
                 
-                // Simulación local si está en GitHub Pages sin conexión
-                targetPos.speed = 82;
+                // Modo simulación autónoma si se visualiza en navegador web estándar / GitHub Pages sin juego
+                targetPos.speed = 85;
                 targetPos.z -= targetPos.speed * 0.08;
-                targetPos.x = Math.sin(targetPos.z * 0.001) * 250 + Math.cos(targetPos.z * 0.0003) * 90;
+                targetPos.x = Math.sin(targetPos.z * 0.0009) * 280 + Math.cos(targetPos.z * 0.0003) * 100;
                 
                 const nextZ = targetPos.z - 2;
-                const nextX = Math.sin(nextZ * 0.001) * 250 + Math.cos(nextZ * 0.0003) * 90;
+                const nextX = Math.sin(nextZ * 0.0009) * 280 + Math.cos(nextZ * 0.0003) * 100;
                 targetPos.heading = Math.atan2(nextX - targetPos.x, nextZ - targetPos.z);
 
-                telemetry.cargo = "Contenedor Refrigerado (Demo)";
-                telemetry.destination = "Madrid";
-                telemetry.distanceKm = 1245;
-                telemetry.etaFormatted = "14 h 20 min";
+                telemetryData.cargo = "Maquinaria Industrial (Demo)";
+                telemetryData.destination = "Valencia";
+                telemetryData.distanceKm = 940;
+                telemetryData.etaFormatted = "11 h 15 min";
             }
         }
 
         setInterval(fetchTelemetry, 100);
 
         function render() {
+            // Interpolación suave de posición y velocidad (Lerp)
             currentPos.x += (targetPos.x - currentPos.x) * 0.12;
             currentPos.z += (targetPos.z - currentPos.z) * 0.12;
             currentPos.speed += (targetPos.speed - currentPos.speed) * 0.2;
@@ -326,42 +325,43 @@
             while (diffHead > Math.PI) diffHead -= Math.PI * 2;
             currentPos.heading += diffHead * 0.12;
 
-            elTime.innerText = telemetry.time;
+            // Actualizar elementos en pantalla
+            elTime.innerText = telemetryData.time;
             elSpeed.innerText = Math.round(currentPos.speed);
-            elLimit.innerText = telemetry.speedLimit;
-            elCargo.innerText = `Carga: ${telemetry.cargo}`;
-            elDestination.innerText = `Destino: ${telemetry.destination}`;
-            elEtaTime.innerText = telemetry.etaFormatted;
-            elEtaDist.innerText = `${telemetry.distanceKm.toLocaleString('es-ES')} km`;
+            elLimit.innerText = telemetryData.speedLimit;
+            elCargo.innerText = `Carga: ${telemetryData.cargo}`;
+            elDestination.innerText = `Destino: ${telemetryData.destination}`;
+            elEtaTime.innerText = telemetryData.etaFormatted;
+            elEtaDist.innerText = `${telemetryData.distanceKm.toLocaleString('es-ES')} km`;
 
-            ctx.fillStyle = '#111111';
+            ctx.fillStyle = '#141414';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             const centerX = canvas.width / 2;
-            const centerY = canvas.height * 0.62;
+            const centerY = canvas.height * 0.65;
 
             ctx.save();
             ctx.translate(centerX, centerY);
-            ctx.scale(1, 0.44); 
+            ctx.scale(1, 0.43); // Perspectiva 3D idéntica a TruckSim GPS
             ctx.rotate(-currentPos.heading);
             ctx.translate(-currentPos.x, -currentPos.z);
 
             drawRoads();
             ctx.restore();
 
-            drawTruckCabinIcon(centerX, centerY);
+            drawTruckMarker(centerX, centerY);
 
             requestAnimationFrame(render);
         }
 
         function drawRoads() {
-            roadNetwork.forEach(seg => {
+            roadSegments.forEach(seg => {
                 if (seg.points.length < 2) return;
 
                 if (seg.shoulder) {
                     ctx.beginPath();
                     ctx.strokeStyle = seg.shoulder;
-                    ctx.lineWidth = seg.width + 14;
+                    ctx.lineWidth = seg.width + 16;
                     ctx.lineCap = 'round';
                     seg.points.forEach((pt, i) => i === 0 ? ctx.moveTo(pt.x, pt.z) : ctx.lineTo(pt.x, pt.z));
                     ctx.stroke();
@@ -374,7 +374,8 @@
                 seg.points.forEach((pt, i) => i === 0 ? ctx.moveTo(pt.x, pt.z) : ctx.lineTo(pt.x, pt.z));
                 ctx.stroke();
 
-                for (let i = 10; i < seg.points.length - 10; i += 14) {
+                // Flechas indicadoras de ruta verdes en la autovía
+                for (let i = 10; i < seg.points.length - 10; i += 16) {
                     const p1 = seg.points[i];
                     const p2 = seg.points[i + 1];
                     const angle = Math.atan2(p2.z - p1.z, p2.x - p1.x);
@@ -385,10 +386,10 @@
                     
                     ctx.fillStyle = '#00e640';
                     ctx.beginPath();
-                    ctx.moveTo(10, 0);
-                    ctx.lineTo(-8, -7);
+                    ctx.moveTo(12, 0);
+                    ctx.lineTo(-9, -8);
                     ctx.lineTo(-4, 0);
-                    ctx.lineTo(-8, 7);
+                    ctx.lineTo(-9, 8);
                     ctx.closePath();
                     ctx.fill();
                     ctx.restore();
@@ -396,46 +397,47 @@
             });
         }
 
-        function drawTruckCabinIcon(x, y) {
+        // Marcador del camión estilo TruckSim GPS (Silueta de tractora detallada)
+        function drawTruckMarker(x, y) {
             ctx.save();
             ctx.translate(x, y);
 
             ctx.beginPath();
-            ctx.ellipse(0, 3, 30, 42, 0, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.ellipse(0, 4, 32, 45, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
             ctx.fill();
 
             ctx.beginPath();
-            ctx.arc(0, 0, 35, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(30, 136, 229, 0.2)';
+            ctx.arc(0, 0, 36, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(30, 136, 229, 0.22)';
             ctx.fill();
 
-            ctx.fillStyle = '#1565c0';
+            ctx.fillStyle = '#1e88e5';
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2.2;
 
             ctx.beginPath();
-            ctx.roundRect(-17, -28, 34, 56, 7);
+            ctx.roundRect(-18, -30, 36, 60, 7);
             ctx.fill();
             ctx.stroke();
 
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(-22, -20, 4, 12);
-            ctx.fillRect(18, -20, 4, 12);
+            ctx.fillRect(-23, -22, 4, 13);
+            ctx.fillRect(19, -22, 4, 13);
 
             ctx.fillStyle = '#90caf9';
             ctx.beginPath();
-            ctx.roundRect(-13, -24, 26, 11, 3);
+            ctx.roundRect(-14, -26, 28, 12, 3);
             ctx.fill();
 
             ctx.fillStyle = '#0d47a1';
             ctx.beginPath();
-            ctx.roundRect(-12, -9, 24, 20, 3);
+            ctx.roundRect(-13, -10, 26, 22, 3);
             ctx.fill();
 
             ctx.fillStyle = '#ffeb3b';
-            ctx.fillRect(-15, -28, 5, 3);
-            ctx.fillRect(10, -28, 5, 3);
+            ctx.fillRect(-16, -30, 5, 3);
+            ctx.fillRect(11, -30, 5, 3);
 
             ctx.restore();
         }
